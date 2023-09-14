@@ -9,6 +9,8 @@ services:
       POSTGRES_USER: chat
       POSTGRES_PASSWORD: password
       POSTRES_DB: chat
+    ports:
+      - "5432:5432"
 
 volumes:
   db_data: null
