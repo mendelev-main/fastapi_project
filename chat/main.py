@@ -19,17 +19,22 @@ async def lifespan(_: fastapi.FastAPI) -> AsyncIterator[None]:
 app = fastapi.FastAPI(lifespan=lifespan)
 
 engine = sqlalchemy.ext.asyncio.create_async_engine(config.POSTGRES_URL, echo=True)
-
 create_session = sqlalchemy.ext.asyncio.async_sessionmaker(
     engine, expire_on_commit=False
 )
 
 
-@app.post("/messages/")
-async def send_message(message_data: schemas.SendMessage) -> schemas.Message:
+async def get_message_repo() -> repository.MessageRepo:
     async with create_session() as session:
-        message_repo = repository.MessageRepo(session)
-        message_model = await message_repo.insert_message(message_data)
+        return repository.MessageRepo(session=session)
+
+
+@app.post("/messages/")
+async def send_message(
+    message_data: schemas.SendMessage,
+    message_repo: repository.MessageRepo = fastapi.Depends(get_message_repo),
+) -> schemas.Message:
+    message_model = await message_repo.insert_message(message_data)
     return schemas.Message(
         timestamp=message_model.timestamp,
         edited=message_model.edited,
@@ -38,12 +43,3 @@ async def send_message(message_data: schemas.SendMessage) -> schemas.Message:
         text=message_model.text,
         chat_id=message_model.chat_id,
     )
-
-
-# @app.get("/messages/")
-# async def get_messages(chat_id: str | None = None) -> list[schemas.Message]:
-#     return (
-#         messages
-#         if chat_id is None
-#         else [message for message in messages if message.chat_id == chat_id]
-#     )
